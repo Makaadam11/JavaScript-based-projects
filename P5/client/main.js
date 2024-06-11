@@ -77,15 +77,20 @@ function draw() {
   let s = saturation(bgColor);
   let b = brightness(bgColor);
 
-  // Map the light value to a small adjustment in brightness
-  let lightAdjustment = map(light, 0, 255, -10, 10);
+  // Apply a logarithmic transformation to the light value
+  let logLight = Math.log10(light + 1); // Adding 1 to avoid log(0)
+  let maxLogLight = Math.log10(256); // Assuming light max value is 255
 
-  // Adjust the brightness by a small amount based on the light value
-  let newBrightness = constrain(b + lightAdjustment, 0, 1000);
+  // Map the transformed light value to an adjustment in brightness
+  // Adjust the range to be more suitable for brightness adjustment
+  let lightAdjustment = map(logLight, 0, maxLogLight, -50, 50); // Example range adjustment
 
-  // Create a new color with the same hue and saturation, but with the new brightness
-  let newColor = color(h, s, newBrightness);
-  console.log(newColor);
+  // Adjust the original brightness based on the transformed light value
+  let adjustedBrightness = constrain(lightAdjustment, 0, 100);
+
+  console.log("Adjusted brightness: " + adjustedBrightness);
+  // Create a new color with the same hue and saturation, but adjusted brightness
+  let newColor = color(h, s, adjustedBrightness);
 
   // Set the background color
   background(newColor);
@@ -108,7 +113,7 @@ function draw() {
 
 function displayLegend() {
   fill(255);
-  rect(10, 10, 300, 240, 10); // Background for the legend
+  rect(10, 10, 305, 260, 10); // Background for the legend
   fill(0);
   textSize(12);
   textAlign(LEFT);
@@ -169,17 +174,17 @@ function displayLegend() {
     if (light > 0.0001 && light <= 1) {
       text("Moonlight: 0.0001 - 1 lux", 20, 170);
     } else if (light > 1 && light <= 10) {
-      text("Dark room: 10 - 50 lux", 20, 170);
+      text("Dark room: 1 - 10 lux", 20, 170);
     } else if (light > 10 && light <= 50) {
-      text("Living room: 50 - 300 lux", 20, 170);
+      text("Living room: 10 - 50 lux", 20, 170);
     } else if (light > 50 && light <= 300) {
-      text("Office: 300 - 500 lux", 20, 170);
+      text("Office: 50 - 300 lux", 20, 170);
     } else if (light > 300 && light <= 500) {
-      text("Supermarket: 500 - 1,000 lux", 20, 170);
-    } else if (light > 500 && light <= 1000) {
-      text("Overcast day: 1,000 - 5,000 lux", 20, 170);
-    } else if (light > 1000) {
-      text("Very bright: > 1,000 lux", 20, 170);
+      text("Supermarket: 300 - 500 lux", 20, 170);
+    } else if (light > 500 && light <= 5000) {
+      text("Overcast day: 500 - 5,000 lux", 20, 170);
+    } else if (light > 5000) {
+      text("Very bright: > 5,000 lux", 20, 170);
     }
   } else if (light === undefined) {
     text("Light: Loading data..", 20, 150);
@@ -187,11 +192,25 @@ function displayLegend() {
 
   if (temperature !== undefined) {
     text("Temperature: " + temperature + "°C", 20, 190);
+    if (temperature < 0) {
+      text("Freezing: <0°C", 20, 210);
+    } else if (temperature >= 0 && temperature < 10) {
+      text("Cold: 0-10°C", 20, 210);
+    }
+    if (temperature >= 10 && temperature < 20) {
+      text("Cool: 10-20°C", 20, 210);
+    }
+    if (temperature >= 20 && temperature < 30) {
+      text("Warm: 20-30°C", 20, 210);
+    }
+    if (temperature >= 30) {
+      text("Hot: >30°C", 20, 210);
+    }
   } else if (temperature === undefined) {
     text("Temperature: Loading data..", 20, 190);
   }
-  text("Particles amount is defined by parameter value.", 20, 210);
-  text("Background colour is defined by temerature and light.", 20, 230);
+  text("Particles amount is defined by parameter value.", 20, 230);
+  text("Background colour is defined by temperature and light.", 20, 250);
 }
 
 class Particle {
@@ -235,7 +254,7 @@ class ParticleSystem {
   }
 
   addParticleHumidity() {
-    // Only add a new particle every 10th call to addParticle()
+    // Only add a new particle every 100th call to addParticle()
     if (this.counter % 100 === 0) {
       // Randomize the x-coordinate of the origin
       this.origin.x = random(0, width);
@@ -247,7 +266,7 @@ class ParticleSystem {
   }
 
   addParticleCo2() {
-    // Only add a new particle every 50th call to addParticle()
+    // Only add a new particle every 1000th call to addParticle()
     if (this.counter % 1000 === 0) {
       // Randomize the x and y coordinates of the origin
       this.origin.x = random(0, width);
