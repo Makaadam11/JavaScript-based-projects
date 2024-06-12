@@ -6,6 +6,7 @@ to run, use the following command:
 
 ```bash
 cd server
+npm install
 node webserver.js
 
 ```
