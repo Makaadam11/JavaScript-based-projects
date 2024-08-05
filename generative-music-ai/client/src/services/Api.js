@@ -2,13 +2,12 @@
 
 export const handleClick = async (songDescription, navigate = null, audioFileURL = null, blobName = null) => {
 	try {
-		console.log(songDescription, audioFileURL);
 		let song_url = "";
 
 		if (songDescription && !audioFileURL) {
 			console.log("song description in generateFromDescription:", { description: songDescription });
 			song_url = await generateFromDescription(songDescription);
-			console.log("song_url z handleClick:", song_url);
+			// console.log("song_url z handleClick:", song_url);
 		} else if (songDescription && navigate && audioFileURL && blobName) {
 			console.log("song description and audio file URL in generateDescriptionAndAudio:", { description: songDescription, audioFileURL: audioFileURL });
 			song_url = await generateDescriptionAndAudio(songDescription, audioFileURL, blobName);
@@ -27,12 +26,13 @@ export const handleClick = async (songDescription, navigate = null, audioFileURL
 		return song_url;
 	} catch (error) {
 		console.error("Error in handleClick:", error);
+		return { song_url: null, status: 500 };
 	}
 };
 
-export async function generateDescription(description, navigate) {
+export async function generateDescription(text, navigate) {
 	let songDescription = "";
-	console.log("description from generateDescription:", description);
+	console.log("description from generateDescription:", text);
 
 	try {
 		const response = await fetch("http://127.0.0.1:5000/api/generate_text", {
@@ -41,7 +41,7 @@ export async function generateDescription(description, navigate) {
 			headers: {
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify({ text: description }),
+			body: JSON.stringify({ text: text }),
 		});
 
 		if (!response.ok) {
@@ -69,13 +69,8 @@ export async function generateDescription(description, navigate) {
 
 		if (songDescription && navigate) {
 			navigate("/songdescription", { state: { description: songDescription } });
-			return songDescription;
 		}
-		if (songDescription && !navigate) {
-			return songDescription;
-		} else {
-			console.error("Received null song description from server");
-		}
+		return songDescription;
 	} catch (error) {
 		console.error("Error in generateSongWithDescription:", error);
 		throw error;
@@ -110,6 +105,7 @@ async function generateFromDescription(description) {
 		throw error;
 	}
 }
+
 export async function uploadFileAndGenerate(audioBlob) {
 	const formData = new FormData();
 	formData.append("file", audioBlob, "audio.wav");
@@ -165,18 +161,22 @@ export async function generateFromAudio(audioFileLink, blobName) {
 }
 
 export async function generateDescriptionAndAudio(description, audioFileURL, blobName) {
-	const formData = new FormData();
+	const data = {
+		description: description,
+		audioLink: audioFileURL,
+		blobName: blobName,
+	};
 	console.log("audio file in generateDescriptionAndAudio:", audioFileURL);
 	console.log("description in generateDescriptionAndAudio:", description);
-	formData.append("description", description);
-	formData.append("audioUrl", audioFileURL);
-	formData.append("blobName", blobName);
 
 	try {
 		const response = await fetch("http://127.0.0.1:5000/api/generate_with_multi", {
 			mode: "cors",
 			method: "POST",
-			body: formData, // FormData will set the Content-Type to 'multipart/form-data'
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(data),
 		});
 
 		if (!response.ok) {
@@ -190,13 +190,14 @@ export async function generateDescriptionAndAudio(description, audioFileURL, blo
 			throw new Error("No song URL returned from server");
 		}
 
+		console.log("songUrl from generateDescriptionAndAudio: " + songUrl);
 		return songUrl;
 	} catch (error) {
 		console.error("Error in generateDescriptionAndAudio:", error);
 	}
 }
 
-export const analyzeFace = async function (image, navigate) {
+export const analyzeFace = async function (image) {
 	try {
 		const response = await fetch("http://localhost:5000/api/analyze_face", {
 			method: "POST",
@@ -214,13 +215,10 @@ export const analyzeFace = async function (image, navigate) {
 		const faceAnalysis = await response.json();
 		console.log(faceAnalysis);
 
-		// Extract the emotion data and create a description string
 		const emotionData = faceAnalysis.response[0].emotion;
-		const description = Object.entries(emotionData)
+		return Object.entries(emotionData)
 			.map(([emotion, value]) => `${emotion}: ${value.toFixed(2)}`)
 			.join(", ");
-
-		return handleClick(description, navigate);
 	} catch (error) {
 		console.error("Error in analyzeFace:", error);
 	}
@@ -238,7 +236,8 @@ export const transcribeSpeech = async function (audio, navigate) {
 		});
 
 		if (!response.ok) {
-			throw new Error(`HTTP error! status: ${response.status}`);
+			const errorText = await response.text();
+			throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
 		}
 
 		const responseBody = await response.text();
@@ -253,10 +252,9 @@ export const transcribeSpeech = async function (audio, navigate) {
 
 		console.log("Transcription text:", transcription);
 
-		const songDescription = generateDescription(transcription, navigate);
-		return songDescription;
+		await generateDescription(transcription, navigate);
+		return 200;
 	} catch (error) {
-		console.error("Error in transcribeSpeech:", error);
 		console.error(`Failed to transcribe speech. Status code: ${error.status}, Message: ${error.message}`);
 	}
 };

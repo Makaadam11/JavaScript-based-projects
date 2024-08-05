@@ -21,7 +21,7 @@ class MistralAI:
             print("Request was successful.")
             # Get the generated text
             generated_text = response.json()['output']
-            print("Generated text: ", generated_text)
+            print("Generated text from MistralAI: ", generated_text)
             return generated_text
         else:
             print(f"Request failed with status code {response.status_code}.")

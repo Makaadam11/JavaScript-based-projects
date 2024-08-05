@@ -25,7 +25,7 @@ BUCKET_NAME = 'musicgen-songs'
 @cross_origin()
 def generate_text():
     text = request.json.get('text')
-    print("generate_text server: ", text)
+    print("generate_text description on server api: ", text)
     mistralai_model = MistralAI()
     response = mistralai_model.generate_text(text)
     return jsonify({"response": response}), 200
@@ -53,7 +53,7 @@ def transcribe_speech():
         audio = AudioSegment.from_file(audio_file, format="webm")
         wav_io = io.BytesIO()
         audio.export(wav_io, format="wav", parameters=["-ac", "1", "-ar", "16000"])  # Mono channel, 16000Hz
-        wav_io.seek(0)  # Important to rewind to the start of the BytesIO object
+        wav_io.seek(0) 
 
         s2t2_model = Speech2Text2Transcriber()
         transcription = s2t2_model.generate_transcription(wav_io)
@@ -65,6 +65,7 @@ def transcribe_speech():
 
         return jsonify({"transcription": transcription}), 200
     except Exception as e:
+        print(f"An error occurred: {str(e)}")
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
 @api.route('/generate_with_description', methods=['POST'])
@@ -129,13 +130,15 @@ def generate_from_audio():
 @api.route('/generate_with_multi', methods=['POST'])
 @cross_origin()
 def generate_with_multi():
-    description = request.form.get('description')
-    audio_link = request.form.get('audioLink')
-    blob_name = request.form.get('blobName')
-    if not description or not audio_link or not blob_name:
-        return jsonify({"error": "No description or audio link provided"}), 400
+    data = request.get_json()
+    if not data or 'description' not in data or 'audioLink' not in data or 'blobName' not in data:
+        return jsonify({"error": "No description, audio link, or blob name provided"}), 400
 
+    description = data['description']
+    audio_link = data['audioLink']
+    blob_name = data['blobName']
     print("audio_link: ", audio_link)
+    print("description: ", description)
     try:
         music_gen = MusicGen()
         generated_music_url = music_gen.generate_music(description, audio_link)

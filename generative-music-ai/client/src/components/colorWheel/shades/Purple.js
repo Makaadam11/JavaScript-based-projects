@@ -2,12 +2,13 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { BreadcrumbsBar, BreadcrumbItem, Button } from "monday-ui-react-core";
-import { Workspace, Placeholder } from "monday-ui-react-core/icons";
+import { Workspace, Placeholder, Sun } from "monday-ui-react-core/icons";
 import ReactSlider from "react-slider";
 import styled from "styled-components";
 import WaveCard from "../../waveCard/WaveCard.js";
 import HoverButton from "../../hoverButton/HoverButton.js";
 import { generateDescription } from "../../../services/Api";
+import Loader from "../../loader/Loader.js";
 
 const Purple = () => {
 	const navigate = useNavigate();
@@ -15,7 +16,7 @@ const Purple = () => {
 	const PositiveEmotions = ["Creativity, romance, wisdom, self-awareness, enticement, passivity, introspection, truth, wisdom, and compassion"];
 	const NegativeEmotions = ["Arrogance, immaturity, emotion, cynicism, pomposity, corruption, grief, pride, sorrow, solitude, and impracticality"];
 
-	const emotionSentence = `This person feels like ${emotionPercentage}% of ${PositiveEmotions} and ${100 - emotionPercentage}% of ${NegativeEmotions}.`;
+	const emotionSentence = `This person feels like ${emotionPercentage}% of ${NegativeEmotions } and ${100 - emotionPercentage}% of ${PositiveEmotions}.`;
 
 	const getColorShade = (percentage) => {
 		const red = 300 - percentage * 2.55; // Keep red at maximum
@@ -74,45 +75,43 @@ const Purple = () => {
   `;
 
 	const Thumb = (props, state) => (
-		<StyledThumb
-			{...props}
-			value={state.valueNow}>
+		<StyledThumb {...props} value={state.valueNow}>
 			{state.valueNow}%
 		</StyledThumb>
 	);
 
-	const Track = (props, state) => (
-		<StyledTrack
-			{...props}
-			value={state.valueNow}
-		/>
-	);
+	const Track = (props, state) => <StyledTrack {...props} value={state.valueNow} />;
+
+	const [isLoading, setIsLoading] = useState(false);
+
+	const onClick = async () => {
+		setIsLoading(true);
+		try {
+			const description = await generateDescription(emotionSentence, navigate);
+			if (description) {
+			} else {
+				setIsLoading(false);
+			}
+		} catch (error) {
+			console.error("Error in onStop:", error);
+			setIsLoading(false);
+		}
+	};
 
 	return (
-		<motion.div
-			initial={{ opacity: 0 }}
-			animate={{ opacity: 1 }}
-			exit={{ opacity: 0 }}
-			transition={{ duration: 0.5 }}>
+		<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }}>
 			<BreadcrumbsBar
 				type={BreadcrumbsBar.types.NAVIGATION}
 				style={{ position: "absolute", top: 0, left: 0 }}
 				items={[
 					{
 						icon: Workspace,
-						text: "Homepage",
+						text: "Home",
 					},
 				]}>
-				<BreadcrumbItem
-					icon={Workspace}
-					text="Homepage"
-					onClick={() => navigate("/")}
-				/>
-				<BreadcrumbItem
-					icon={Placeholder}
-					text="Colour"
-					onClick={() => navigate("/color")}
-				/>
+				<BreadcrumbItem icon={Workspace} text="Home" onClick={() => navigate("/")} />
+				<BreadcrumbItem icon={Placeholder} text="Colour" onClick={() => navigate("/color")} />
+				<BreadcrumbItem icon={Sun} text="Shade" />
 			</BreadcrumbsBar>
 			<div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "70vh" }}>
 				<WaveCard
@@ -128,28 +127,12 @@ const Purple = () => {
 				/>
 
 				<div style={{ display: "flex", justifyContent: "space-between", width: "70%" }}>
-					<StyledSlider
-						value={emotionPercentage}
-						onChange={(value) => setEmotionPercentage(value)}
-						min={0}
-						max={100}
-						renderThumb={Thumb}
-						renderTrack={Track}
-					/>{" "}
+					<StyledSlider value={emotionPercentage} onChange={(value) => setEmotionPercentage(value)} min={0} max={100} renderThumb={Thumb} renderTrack={Track} />{" "}
 				</div>
-				<div style={{ marginTop: "2%" }}>
-					{" "}
-					<HoverButton
-						onclick={() => generateDescription(emotionSentence, navigate)}
-						text="Generate"
-						color="#AA68C8"
-						width="220px"
-						height="100px"
-						style={{ margin: "10px" }}
-					/>
-				</div>
+				<div style={{ marginTop: "2%" }}> {isLoading ? <Loader style={{ height: "100px" }} /> : <HoverButton onclick={() => onClick()} text="Generate" color="#AA68C8" width="220px" height="100px" style={{ margin: "10px" }} />}</div>
 			</div>
 		</motion.div>
 	);
 };
+
 export default Purple;
