@@ -1,7 +1,7 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Webcam from "react-webcam";
 import { Button, BreadcrumbsBar, BreadcrumbItem } from "monday-ui-react-core";
-import { analyzeFace, generateDescription } from "../../services/Api.js";
+import { analyzeFace, logUserInteraction } from "../../services/Api.js";
 import { motion } from "framer-motion";
 import { Form, Quote, Emoji, Placeholder, Workspace } from "monday-ui-react-core/icons";
 import { useNavigate } from "react-router-dom";
@@ -29,6 +29,44 @@ const Express = () => {
 		}
 	};
 
+	useEffect(() => {
+		const handleClick = (event) => {
+			const interaction = {
+				type: "click",
+				element: event.target.tagName,
+				url: window.location.href,
+			};
+			logUserInteraction(interaction);
+		};
+
+		const handleNavigation = () => {
+			const interaction = {
+				type: "navigation",
+				url: window.location.href,
+			};
+			logUserInteraction(interaction);
+		};
+
+		document.addEventListener("click", handleClick);
+		window.addEventListener("popstate", handleNavigation);
+
+		// Użyj MutationObserver do wykrywania zmian w URL
+		const observer = new MutationObserver(() => {
+			handleNavigation();
+		});
+
+		observer.observe(document.body, { childList: true, subtree: true });
+
+		// Wywołaj handleNavigation na początku, aby zarejestrować początkowy URL
+		handleNavigation();
+
+		return () => {
+			document.removeEventListener("click", handleClick);
+			window.removeEventListener("popstate", handleNavigation);
+			observer.disconnect();
+		};
+	}, []);
+
 	return (
 		<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }}>
 			<BreadcrumbsBar
@@ -44,7 +82,7 @@ const Express = () => {
 						text: "Express",
 					},
 				]}>
-				<BreadcrumbItem icon={Workspace} text="Home" onClick={() => navigate("/")} />
+				<BreadcrumbItem icon={Workspace} text="Home" onClick={() => navigate("/home")} />
 				<BreadcrumbItem icon={Emoji} text="Express" />
 			</BreadcrumbsBar>
 			<div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>

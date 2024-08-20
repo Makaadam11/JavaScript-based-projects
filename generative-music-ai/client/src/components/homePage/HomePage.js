@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button, BreadcrumbItem, BreadcrumbsBar } from "monday-ui-react-core";
 import { useNavigate } from "react-router-dom";
 import { Form, Quote, Emoji, Placeholder, Workspace } from "monday-ui-react-core/icons";
@@ -8,7 +8,7 @@ import "./HomePage.css"; // make sure the path to your CSS file is correct
 import HoverButton from "../hoverButton/HoverButton.js";
 import WaveCard from "../waveCard/WaveCard.js";
 import { useHover } from "@uidotdev/usehooks";
-import { color } from "d3";
+import { stopScreenRecording, logUserInteraction } from "../../services/Api.js";
 
 const HomePage = () => {
 	const navigate = useNavigate();
@@ -76,17 +76,45 @@ const HomePage = () => {
 		}
 	}, [isHovering, isHovering1, isHovering2, isHovering3, isHovering4, isHovering5]);
 
+	useEffect(() => {
+		const handleClick = (event) => {
+			const interaction = {
+				type: "click",
+				element: event.target.tagName,
+				url: window.location.href,
+			};
+			logUserInteraction(interaction);
+		};
+
+		const handleNavigation = () => {
+			const interaction = {
+				type: "navigation",
+				url: window.location.href,
+			};
+			logUserInteraction(interaction);
+		};
+
+		document.addEventListener("click", handleClick);
+		window.addEventListener("popstate", handleNavigation);
+
+		const observer = new MutationObserver(() => {
+			handleNavigation();
+		});
+
+		observer.observe(document.body, { childList: true, subtree: true });
+
+		handleNavigation();
+
+		return () => {
+			document.removeEventListener("click", handleClick);
+			window.removeEventListener("popstate", handleNavigation);
+			observer.disconnect();
+		};
+	}, []);
+
 	return (
-		<motion.div
-			initial={{ opacity: 0 }}
-			animate={{ opacity: 1 }}
-			exit={{ opacity: 0 }}
-			transition={{ duration: 0.5 }}>
-			<CSSTransition
-				in={true}
-				appear={true}
-				timeout={500}
-				classNames="fade">
+		<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }}>
+			<CSSTransition in={true} appear={true} timeout={500} classNames="fade">
 				<div>
 					<BreadcrumbsBar
 						style={{ position: "absolute", top: 0, left: 0 }}
@@ -96,56 +124,17 @@ const HomePage = () => {
 								text: "Home",
 							},
 						]}>
-						<BreadcrumbItem
-							icon={Workspace}
-							text="Home"
-						/>
+						<BreadcrumbItem icon={Workspace} text="Home" />
 					</BreadcrumbsBar>
+					<Button onClick={stopScreenRecording}>Stop Recording</Button>
 					<div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", marginTop: "1%" }}>
 						<div style={{ display: "flex", justifyContent: "space-between", width: "82%" }}>
-							<HoverButton
-								text="Melody"
-								ref={hoverRef}
-								onclick={() => navigate("/melody")}
-								color="#FFB6C1"
-								width="165px"
-								height="200px"
-							/>
-							<HoverButton
-								text="Chat"
-								ref={hoverRef1}
-								onclick={() => navigate("/chat")}
-								color="#4682B4"
-								width="165px"
-								height="200px"></HoverButton>
-							<HoverButton
-								text="Compose"
-								ref={hoverRef2}
-								onclick={() => navigate("/composetext")}
-								color="#868387"
-								width="165px"
-								height="200px"></HoverButton>
-							<HoverButton
-								text="Talk"
-								ref={hoverRef3}
-								onclick={() => navigate("/talk")}
-								color="#FF6B6B"
-								width="165px"
-								height="200px"></HoverButton>
-							<HoverButton
-								text="Express"
-								ref={hoverRef4}
-								onclick={() => navigate("/express")}
-								color="#FFA07A"
-								width="165px"
-								height="200px"></HoverButton>
-							<HoverButton
-								text="Colour"
-								ref={hoverRef5}
-								onclick={() => navigate("/color")}
-								color="#8FBC8F"
-								width="165px"
-								height="200px"></HoverButton>
+							<HoverButton text="Melody" ref={hoverRef} onclick={() => navigate("/melody")} color="#FFB6C1" width="165px" height="200px" />
+							<HoverButton text="Chat" ref={hoverRef1} onclick={() => navigate("/chat")} color="#4682B4" width="165px" height="200px"></HoverButton>
+							<HoverButton text="Compose" ref={hoverRef2} onclick={() => navigate("/composetext")} color="#868387" width="165px" height="200px"></HoverButton>
+							<HoverButton text="Talk" ref={hoverRef3} onclick={() => navigate("/talk")} color="#FF6B6B" width="165px" height="200px"></HoverButton>
+							<HoverButton text="Express" ref={hoverRef4} onclick={() => navigate("/express")} color="#FFA07A" width="165px" height="200px"></HoverButton>
+							<HoverButton text="Colour" ref={hoverRef5} onclick={() => navigate("/color")} color="#8FBC8F" width="165px" height="200px"></HoverButton>
 						</div>
 						<WaveCard
 							text={waveCardProps.text}

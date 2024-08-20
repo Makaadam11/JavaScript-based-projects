@@ -1,14 +1,20 @@
 from flask import Flask, request, jsonify, Blueprint, send_from_directory
 from flask_cors import CORS, cross_origin
-import base64
-import numpy as np
 from google.cloud import storage
 from werkzeug.utils import secure_filename
 from models.mistralai import MistralAI
 from models.deepface import DeepFaceModel
 from models.speech2text import Speech2Text2Transcriber
 from models.musicgen import MusicGen
+from collections import defaultdict
 from uuid import uuid4
+from datetime import datetime
+import threading
+import pyautogui
+import numpy as np
+import pandas as pd
+import base64
+import time
 import cv2
 from pydub import AudioSegment
 import os
@@ -146,3 +152,132 @@ def generate_with_multi():
         return jsonify({"songUrl": generated_music_url}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+recording = False
+frames = []
+event_log = defaultdict(list)
+combined_log = defaultdict(dict)
+start_time = None
+last_two_logged_interactions = []
+
+def record_screen(duration, interval):
+    global recording, frames, event_log, start_time
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        print("Error: Could not open webcam.")
+        return
+    while recording and (time.time() - start_time) < duration:
+        ret, frame = cap.read()
+        if ret:
+            try:
+                timestamp = round(time.time() - start_time, 2)
+                frames.append((timestamp, frame))
+                model = DeepFaceModel()
+                emotion_result = model.process_frame(frame)
+                emotion = emotion_result[0]['emotion']
+                
+                event_log[timestamp].append({
+                    "happy": emotion['happy'],
+                    "neutral": emotion['neutral'],
+                    "surprise": emotion['surprise'],
+                    "sad": emotion['sad'],
+                    "angry": emotion['angry'],
+                    "fear": emotion['fear'],
+                    "disgust": emotion['disgust']
+                })
+                print("timestamp: ", timestamp, "Evennt_log", event_log[timestamp])
+            except Exception as e:
+                print(f"Error processing frame: {e}")
+        else:
+            print("Error: Could not read frame.")
+            break
+        time.sleep(interval)
+    cap.release()
+
+@api.route('/start_screen_recording', methods=['POST'])
+@cross_origin()
+def start_screen_recording():
+    global recording, frames, event_log, start_time
+    recording = True
+    frames = []
+    event_log = defaultdict(list)
+    start_time = time.time()
+    duration = request.json.get('duration', 60)
+    interval = 0.15
+    threading.Thread(target=record_screen, args=(duration, interval)).start()
+    return jsonify({"message": "Screen recording started"}), 200
+
+@api.route('/stop_screen_recording', methods=['POST'])
+@cross_origin()
+def stop_screen_recording():
+    global recording, event_log, frames, combined_log
+    recording = False
+
+    for timestamp in event_log.keys():
+        emotions = next((item for item in event_log[timestamp] if "happy" in item), {})
+        interaction = next((item for item in event_log[timestamp] if "type" in item), {})
+        
+        combined_log[timestamp] = {
+            "emotions": emotions,
+            "interaction": interaction
+        }
+        print("\n\ntimestamp: ", timestamp, "Combined_log", combined_log[timestamp])
+
+
+    save_to_excel(combined_log)
+    return jsonify({"message": "Screen recording stopped"}), 200
+
+@api.route('/log_interaction', methods=['POST'])
+@cross_origin()
+def log_interaction():
+    global event_log, start_time, last_two_logged_interactions
+    interaction_data = request.json.get('interaction')
+    timestamp = round(time.time() - start_time, 2)
+    
+    print(f"Interaction logged: {interaction_data} at timestamp {timestamp}")
+    
+    # Check if the new interaction is the same as the last two logged interactions
+    if len(last_two_logged_interactions) == 2:
+        last_interaction = last_two_logged_interactions[-1]
+        second_last_interaction = last_two_logged_interactions[-2]
+        
+        if (interaction_data.get('type', '') == last_interaction.get('type', '') == second_last_interaction.get('type', '') and
+            interaction_data.get('url', '') == last_interaction.get('url', '') == second_last_interaction.get('url', '')):
+            print("Duplicate interaction detected, not logging.")
+            return jsonify({"message": "Duplicate interaction, not logged"}), 200
+    
+    event_log[timestamp].append(interaction_data)
+    
+    # Update the last two logged interactions
+    last_two_logged_interactions.append(interaction_data)
+    if len(last_two_logged_interactions) > 2:
+        last_two_logged_interactions.pop(0)
+    
+    print(f"Current event_log: {event_log}")
+    
+    return jsonify({"message": "Interaction logged"}), 200
+
+def save_to_excel(combined_log):
+    current_time = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'interactions_and_emotions_{current_time}.xlsx'
+    
+    data = []
+    for timestamp, log_entry in combined_log.items():
+        row = {
+            'timestamp': timestamp,
+            'happy': log_entry['emotions'].get('happy', ''),
+            'neutral': log_entry['emotions'].get('neutral', ''),
+            'surprise': log_entry['emotions'].get('surprise', ''),
+            'sad': log_entry['emotions'].get('sad', ''),
+            'angry': log_entry['emotions'].get('angry', ''),
+            'fear': log_entry['emotions'].get('fear', ''),
+            'disgust': log_entry['emotions'].get('disgust', ''),
+            'interaction_type': log_entry['interaction'].get('type', ''),
+            'interaction_element': log_entry['interaction'].get('element', ''),
+            'url': log_entry['interaction'].get('url', '').replace('http://localhost:3000', ''),
+        }
+        data.append(row)
+    
+    df = pd.DataFrame(data)
+    df.to_excel(filename, index=False)
+    print(f"Excel file saved: {filename}")

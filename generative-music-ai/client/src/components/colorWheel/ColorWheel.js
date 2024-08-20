@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { BreadcrumbsBar, BreadcrumbItem } from "monday-ui-react-core";
 import WaveCard from "../waveCard/WaveCard.js";
 import { useHover } from "@uidotdev/usehooks";
+import { logUserInteraction } from "../../services/Api";
 
 const DetailsContainer = styled.div`
   margin-top: 20px;
@@ -74,6 +75,34 @@ const ColorWheel = () => {
 		// Convert each component back to a two-digit hexadecimal number and return the combined color
 		return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
 	};
+
+	useEffect(() => {
+		const handleClick = (event) => {
+			const interaction = {
+				type: "click",
+				element: event.target.tagName,
+				timestamp: new Date().toISOString(),
+			};
+			logUserInteraction(interaction);
+		};
+
+		const handleBeforeUnload = (event) => {
+			const interaction = {
+				type: "navigation",
+				url: window.location.href,
+				timestamp: new Date().toISOString(),
+			};
+			logUserInteraction(interaction);
+		};
+
+		document.addEventListener("click", handleClick);
+		window.addEventListener("beforeunload", handleBeforeUnload);
+
+		return () => {
+			document.removeEventListener("click", handleClick);
+			window.removeEventListener("beforeunload", handleBeforeUnload);
+		};
+	}, []);
 
 	useEffect(() => {
 		const colors = Object.keys(colours);
@@ -179,7 +208,7 @@ const ColorWheel = () => {
 						text: "Home",
 					},
 				]}>
-				<BreadcrumbItem icon={Workspace} text="Home" onClick={() => navigate("/")} />
+				<BreadcrumbItem icon={Workspace} text="Home" onClick={() => navigate("/home")} />
 				<BreadcrumbItem icon={Placeholder} text="Colour" />
 			</BreadcrumbsBar>
 			<WaveCard

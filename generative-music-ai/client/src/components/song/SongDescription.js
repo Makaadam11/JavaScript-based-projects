@@ -7,36 +7,47 @@ import { useLocation } from "react-router-dom";
 import HoverButton from "../hoverButton/HoverButton.js";
 import { handleClick, generateDescription } from "../../services/Api";
 import Loader from "../loader/Loader.js";
+import { logUserInteraction } from "../../services/Api";
 
 const SongDescription = () => {
 	const navigate = useNavigate();
-
+	const [isLoading, setIsLoading] = useState(false);
+	const [songURL, setSongURL] = useState(null);
 	const location = useLocation();
 	const description = location.state?.description;
 	const faceExpression = location.state?.faceExpression;
+	const readySongUrl = location.state?.song;
 	let formattedDescription = "";
 	if (description) {
-		formattedDescription = description.replace(/(Title|Tempo|Genre|Melody):/g, "\n$&");
+		formattedDescription = description.replace(/(Title|Tempo|Genre|Melodic progression|Rythm):/g, "\n$&");
 	}
-	let songURL = "";
 
 	useEffect(() => {
 		const fetchSongURL = async () => {
-			songURL = await handleClick(description);
+			try {
+				let url = await handleClick(description);
+				if (url) {
+					setSongURL(url);
+					setIsLoading(false);
+				}
+			} catch (error) {
+				console.error("Error fetching song URL:", error);
+				setIsLoading(false);
+			}
 		};
 
-		if (description && navigate) {
+		if (description && !readySongUrl) {
+			setIsLoading(true);
 			fetchSongURL();
 		}
-	}, [description, navigate]);
-
-	const [isLoading, setIsLoading] = useState(false);
+	}, [description, readySongUrl]);
 
 	const generateSongFromExpression = async () => {
 		setIsLoading(true);
+		let description = "";
 		try {
 			if (faceExpression) {
-				const description = await generateDescription(faceExpression, navigate);
+				description = await generateDescription(faceExpression, navigate);
 			}
 			if (description) {
 			} else {
@@ -48,24 +59,46 @@ const SongDescription = () => {
 		}
 	};
 
-	// const generateSongFromExpression = async () => {
-	// 	if (faceExpression) {
-	// 		await generateDescription(faceExpression, navigate);
-	// 	}
-	// };
-
-	const navigateToSong = async () => {
-		setIsLoading(true);
-		console.log("navigateToSong", songURL);
-		if (songURL) {
+	const navigateToSong = () => {
+		if (readySongUrl) {
+			navigate("/song", { state: { song: readySongUrl } });
+		} else if (songURL) {
 			navigate("/song", { state: { song: songURL } });
 		}
 	};
 
+	useEffect(() => {
+		const handleClick = (event) => {
+			const interaction = {
+				type: "click",
+				element: event.target.tagName,
+				timestamp: new Date().toISOString(),
+			};
+			logUserInteraction(interaction);
+		};
+
+		const handleBeforeUnload = (event) => {
+			const interaction = {
+				type: "navigation",
+				url: window.location.href,
+				timestamp: new Date().toISOString(),
+			};
+			logUserInteraction(interaction);
+		};
+
+		document.addEventListener("click", handleClick);
+		window.addEventListener("beforeunload", handleBeforeUnload);
+
+		return () => {
+			document.removeEventListener("click", handleClick);
+			window.removeEventListener("beforeunload", handleBeforeUnload);
+		};
+	}, []);
+
 	return (
 		<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }}>
 			<BreadcrumbsBar type={BreadcrumbsBar.types.NAVIGATION} style={{ position: "absolute", top: 0, left: 0 }}>
-				<BreadcrumbItem icon={Workspace} text="Home" onClick={() => navigate("/")} />
+				<BreadcrumbItem icon={Workspace} text="Home" onClick={() => navigate("/home")} />
 				<BreadcrumbItem icon={Education} text="Description" />
 			</BreadcrumbsBar>
 			<div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "70vh" }}>
@@ -86,7 +119,9 @@ const SongDescription = () => {
 					</div>
 				</div>
 				{isLoading ? (
-					<Loader />
+					<div style={{ marginTop: "25px" }}>
+						<Loader />
+					</div>
 				) : (
 					<div>
 						{" "}
@@ -96,7 +131,7 @@ const SongDescription = () => {
 							</div>
 						)}
 						{faceExpression && (
-							<div style={{ marginTop: "40px" }}>
+							<div style={{ marginTop: "60px" }}>
 								<HoverButton text="Generate song" onclick={() => generateSongFromExpression()} color="#FFB6C1" width="400px" height="100px" />
 							</div>
 						)}

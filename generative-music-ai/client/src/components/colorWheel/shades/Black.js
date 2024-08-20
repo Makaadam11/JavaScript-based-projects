@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { BreadcrumbsBar, BreadcrumbItem, Button } from "monday-ui-react-core";
@@ -7,7 +7,7 @@ import ReactSlider from "react-slider";
 import styled from "styled-components";
 import WaveCard from "../../waveCard/WaveCard.js";
 import HoverButton from "../../hoverButton/HoverButton.js";
-import { generateDescription } from "../../../services/Api";
+import { generateDescription, logUserInteraction } from "../../../services/Api";
 import Loader from "../../loader/Loader.js";
 
 const Black = () => {
@@ -96,6 +96,34 @@ const Black = () => {
 		}
 	};
 
+	useEffect(() => {
+		const handleClick = (event) => {
+			const interaction = {
+				type: "click",
+				element: event.target.tagName,
+				timestamp: new Date().toISOString(),
+			};
+			logUserInteraction(interaction);
+		};
+
+		const handleBeforeUnload = (event) => {
+			const interaction = {
+				type: "navigation",
+				url: window.location.href,
+				timestamp: new Date().toISOString(),
+			};
+			logUserInteraction(interaction);
+		};
+
+		document.addEventListener("click", handleClick);
+		window.addEventListener("beforeunload", handleBeforeUnload);
+
+		return () => {
+			document.removeEventListener("click", handleClick);
+			window.removeEventListener("beforeunload", handleBeforeUnload);
+		};
+	}, []);
+
 	return (
 		<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }}>
 			<BreadcrumbsBar
@@ -107,7 +135,7 @@ const Black = () => {
 						text: "Home",
 					},
 				]}>
-				<BreadcrumbItem icon={Workspace} text="Home" onClick={() => navigate("/")} />
+				<BreadcrumbItem icon={Workspace} text="Home" onClick={() => navigate("/home")} />
 				<BreadcrumbItem icon={Placeholder} text="Colour" onClick={() => navigate("/color")} />
 				<BreadcrumbItem icon={Sun} text="Shade" />
 			</BreadcrumbsBar>

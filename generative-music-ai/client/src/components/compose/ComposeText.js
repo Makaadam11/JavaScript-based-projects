@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button, BreadcrumbItem, BreadcrumbsBar } from "monday-ui-react-core";
 import { motion } from "framer-motion";
 import { Form, Quote, Emoji, Placeholder, Workspace } from "monday-ui-react-core/icons";
 import { useNavigate } from "react-router-dom";
 import TextArea from "../textArea/textArea.js";
 import HoverButton from "../hoverButton/HoverButton.js";
-import { generateDescription } from "../../services/Api.js";
+import { generateDescription, logUserInteraction } from "../../services/Api.js";
 import Loader from "../loader/Loader.js";
 
 const ComposeText = () => {
@@ -28,6 +28,34 @@ const ComposeText = () => {
 		}
 	};
 
+	useEffect(() => {
+		const handleClick = (event) => {
+			const interaction = {
+				type: "click",
+				element: event.target.tagName,
+				timestamp: new Date().toISOString(),
+			};
+			logUserInteraction(interaction);
+		};
+
+		const handleBeforeUnload = (event) => {
+			const interaction = {
+				type: "navigation",
+				url: window.location.href,
+				timestamp: new Date().toISOString(),
+			};
+			logUserInteraction(interaction);
+		};
+
+		document.addEventListener("click", handleClick);
+		window.addEventListener("beforeunload", handleBeforeUnload);
+
+		return () => {
+			document.removeEventListener("click", handleClick);
+			window.removeEventListener("beforeunload", handleBeforeUnload);
+		};
+	}, []);
+
 	return (
 		<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }}>
 			<BreadcrumbsBar
@@ -39,7 +67,7 @@ const ComposeText = () => {
 						text: "Home",
 					},
 				]}>
-				<BreadcrumbItem icon={Workspace} text="Home" onClick={() => navigate("/")} />
+				<BreadcrumbItem icon={Workspace} text="Home" onClick={() => navigate("/home")} />
 				<BreadcrumbItem icon={Form} text="Type" />
 			</BreadcrumbsBar>
 			<div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", marginTop: "120px" }}>

@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ReactMic } from "react-mic";
 import { Button, BreadcrumbsBar, BreadcrumbItem } from "monday-ui-react-core";
 import { Form, Sound, Workspace } from "monday-ui-react-core/icons";
 import { useNavigate } from "react-router-dom";
-import { handleClick, uploadFileAndGenerate } from "../../services/Api.js";
+import { handleClick, uploadFileAndGenerate, logUserInteraction } from "../../services/Api.js";
 import { motion } from "framer-motion";
 import HoverButton from "../hoverButton/HoverButton.js";
 import WaveCard from "../waveCard/WaveCard.js";
@@ -50,10 +50,38 @@ const ComposeMelody = () => {
 		}
 	};
 
+	useEffect(() => {
+		const handleClick = (event) => {
+			const interaction = {
+				type: "click",
+				element: event.target.tagName,
+				timestamp: new Date().toISOString(),
+			};
+			logUserInteraction(interaction);
+		};
+
+		const handleBeforeUnload = (event) => {
+			const interaction = {
+				type: "navigation",
+				url: window.location.href,
+				timestamp: new Date().toISOString(),
+			};
+			logUserInteraction(interaction);
+		};
+
+		document.addEventListener("click", handleClick);
+		window.addEventListener("beforeunload", handleBeforeUnload);
+
+		return () => {
+			document.removeEventListener("click", handleClick);
+			window.removeEventListener("beforeunload", handleBeforeUnload);
+		};
+	}, []);
+
 	return (
 		<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }}>
 			<BreadcrumbsBar type={BreadcrumbsBar.types.NAVIGATION} style={{ position: "absolute", top: 0, left: 0 }}>
-				<BreadcrumbItem icon={Workspace} text="Home" onClick={() => navigate("/")} />
+				<BreadcrumbItem icon={Workspace} text="Home" onClick={() => navigate("/home")} />
 				<BreadcrumbItem icon={Form} text="Type" onClick={() => navigate("/composetext")} />
 				<BreadcrumbItem icon={Sound} text="Record" />
 			</BreadcrumbsBar>

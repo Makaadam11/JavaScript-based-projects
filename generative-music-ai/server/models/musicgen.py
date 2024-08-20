@@ -10,15 +10,15 @@ class MusicGen:
         input_data = {
             "top_k": 250,
             "top_p": 0,
-            "temperature": 1,
+            "temperature": 1.1,
             "continuation": False,
             "model_version": "stereo-melody-large",
             "output_format": "wav",
             "continuation_start": 0,
             "multi_band_diffusion": False,
             "normalization_strategy": "peak",
-            "duration": 5,
-            "classifier_free_guidance": 3
+            "duration": 15,
+            "classifier_free_guidance": 8,
         }
 
         if description:

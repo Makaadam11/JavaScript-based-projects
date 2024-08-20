@@ -11,7 +11,8 @@ export const handleClick = async (songDescription, navigate = null, audioFileURL
 		} else if (songDescription && navigate && audioFileURL && blobName) {
 			console.log("song description and audio file URL in generateDescriptionAndAudio:", { description: songDescription, audioFileURL: audioFileURL });
 			song_url = await generateDescriptionAndAudio(songDescription, audioFileURL, blobName);
-			navigate("/song", { state: { song: song_url } });
+			navigate("/songdescription", { state: { description: songDescription, song: song_url } });
+			// navigate("/song", { state: { song: song_url } });
 		} else if (!songDescription && navigate && audioFileURL && blobName) {
 			console.log("audio file URL only in generateFromAudio:", { audioFileURL: audioFileURL });
 			song_url = await generateFromAudio(audioFileURL, blobName);
@@ -256,5 +257,61 @@ export const transcribeSpeech = async function (audio, navigate) {
 		return 200;
 	} catch (error) {
 		console.error(`Failed to transcribe speech. Status code: ${error.status}, Message: ${error.message}`);
+	}
+};
+
+export const logUserInteraction = async function (interaction) {
+	try {
+		const response = await fetch("http://localhost:5000/api/log_interaction", {
+			method: "POST",
+			mode: "cors",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ interaction: interaction }),
+		});
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+	} catch (error) {
+		console.error("Error in logUserInteraction:", error);
+	}
+};
+
+export const startScreenRecording = async function (interval = 1) {
+	try {
+		const response = await fetch("http://localhost:5000/api/start_screen_recording", {
+			method: "POST",
+			mode: "cors",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ interval: interval }),
+		});
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+	} catch (error) {
+		console.error("Error in startScreenRecording:", error);
+	}
+};
+
+export const stopScreenRecording = async function () {
+	try {
+		const response = await fetch("http://localhost:5000/api/stop_screen_recording", {
+			method: "POST",
+			mode: "cors",
+			headers: {
+				"Content-Type": "application/json",
+			},
+		});
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+	} catch (error) {
+		console.error("Error in stopScreenRecording:", error);
 	}
 };
