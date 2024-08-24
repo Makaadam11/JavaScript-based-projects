@@ -5,10 +5,13 @@ from werkzeug.utils import secure_filename
 from models.mistralai import MistralAI
 from models.deepface import DeepFaceModel
 from models.speech2text import Speech2Text2Transcriber
+from models.basicpitch import BasicPitch
 from models.musicgen import MusicGen
 from collections import defaultdict
 from uuid import uuid4
 from datetime import datetime
+import tempfile
+import requests
 import threading
 import pyautogui
 import numpy as np
@@ -116,6 +119,7 @@ def upload_file():
     file_url, blob_name = upload_to_gcs(file, unique_filename)
     return jsonify({"file_url": file_url, "blob_name": blob_name}), 200
 
+
 @api.route('/generate_with_audio', methods=['POST'])
 def generate_from_audio():
     data = request.get_json()
@@ -125,13 +129,48 @@ def generate_from_audio():
     audio_link = data['audioLink']
     blob_name = data['blobName']
     print("audio_link: ", audio_link)
+    print("blob_name: ", blob_name)
+    
+    temp_audio_path = None
+    clean_melody_path = None
+    
     try:
+        print("Initializing GCS client...")
+        client = storage.Client()
+        bucket = client.bucket(BUCKET_NAME)
+        blob = bucket.blob(blob_name)
+        
+        if not blob.exists(client):
+            print("File not found in GCS")
+            return jsonify({"error": "File not found in GCS"}), 404
+
+        temp_audio_path = "audio.wav"
+        print(f"Downloading audio to temporary file: {temp_audio_path}")
+        blob.download_to_filename(temp_audio_path)
+
+        basic_pitch = BasicPitch()
+        print("BasicPitch object created")
+        clean_melody_path = basic_pitch.transcribe_audio(temp_audio_path)
+        print("Audio transcription completed", clean_melody_path)
+        clean_melody_url, clean_melody_blob_name = upload_to_gcs(clean_melody_path, f"clean_melody.wav")
+
+        print("Generating music using the clean melody...")
         music_gen = MusicGen()
-        generated_music_url = music_gen.generate_music("melodic song", audio_link)
-        delete_from_gcs(blob_name)
+        generated_music_url = music_gen.generate_music("melodic song", clean_melody_url)
+        print(f"Generated music URL: {generated_music_url}")
+
         return jsonify({"songUrl": generated_music_url}), 200
     except Exception as e:
+        print(f"Error in generate_from_audio: {e}")
         return jsonify({"error": str(e)}), 500
+    finally:
+        print("Cleaning up temporary files...")
+        if 'clean_melody_blob_name' in locals():
+            delete_from_gcs(clean_melody_blob_name)
+        if 'temp_audio_path' in locals() and os.path.exists(temp_audio_path):
+            os.remove(temp_audio_path)
+        if 'clean_melody_path' in locals() and os.path.exists(clean_melody_path):
+            os.remove(clean_melody_path)
 
 @api.route('/generate_with_multi', methods=['POST'])
 @cross_origin()
@@ -146,9 +185,23 @@ def generate_with_multi():
     print("audio_link: ", audio_link)
     print("description: ", description)
     try:
+        # Stream the audio file from the provided link
+        response = requests.get(audio_link, stream=True)
+        response.raise_for_status()
+        audio_data = response.content
+        
+        # Transcribe the audio to WAV
+        wav_path = f"/tmp/{uuid4()}_transcribed.wav"
+        PianoTranscript.transcribe(audio_data, wav_path)
+        
+        # Generate music using the transcribed WAV
         music_gen = MusicGen()
-        generated_music_url = music_gen.generate_music(description, audio_link)
+        generated_music_url = music_gen.generate_music(description, wav_path)
+        
+        # Clean up
         delete_from_gcs(blob_name)
+        os.remove(wav_path)
+        
         return jsonify({"songUrl": generated_music_url}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -166,6 +219,9 @@ def record_screen(duration, interval):
     if not cap.isOpened():
         print("Error: Could not open webcam.")
         return
+    
+    start_time = time.time()
+
     while recording and (time.time() - start_time) < duration:
         ret, frame = cap.read()
         if ret:
@@ -232,6 +288,9 @@ def stop_screen_recording():
 def log_interaction():
     global event_log, start_time, last_two_logged_interactions
     interaction_data = request.json.get('interaction')
+    if start_time is None:
+        start_time = time.time()
+        
     timestamp = round(time.time() - start_time, 2)
     
     print(f"Interaction logged: {interaction_data} at timestamp {timestamp}")

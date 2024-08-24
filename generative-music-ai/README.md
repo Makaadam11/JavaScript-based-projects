@@ -51,6 +51,10 @@ py -m venv env
 unix:
 source env/bin/activate
 
+or
+
+source env/Scripts/activate
+
 windows:
 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser (set it up only once)
 env\Scripts\activate
