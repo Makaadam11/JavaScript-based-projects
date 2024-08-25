@@ -130,16 +130,16 @@ def generate_from_audio():
     blob_name = data['blobName']
     print("audio_link: ", audio_link)
     print("blob_name: ", blob_name)
-    
+
     temp_audio_path = None
     clean_melody_path = None
-    
+
     try:
         print("Initializing GCS client...")
         client = storage.Client()
         bucket = client.bucket(BUCKET_NAME)
         blob = bucket.blob(blob_name)
-        
+
         if not blob.exists(client):
             print("File not found in GCS")
             return jsonify({"error": "File not found in GCS"}), 404
@@ -152,7 +152,9 @@ def generate_from_audio():
         print("BasicPitch object created")
         clean_melody_path = basic_pitch.transcribe_audio(temp_audio_path)
         print("Audio transcription completed", clean_melody_path)
-        clean_melody_url, clean_melody_blob_name = upload_to_gcs(clean_melody_path, f"clean_melody.wav")
+
+        with open(clean_melody_path, 'rb') as clean_melody_file:
+            clean_melody_url, clean_melody_blob_name = upload_to_gcs(clean_melody_file, f"clean_melody.wav")
 
         print("Generating music using the clean melody...")
         music_gen = MusicGen()
@@ -171,6 +173,7 @@ def generate_from_audio():
             os.remove(temp_audio_path)
         if 'clean_melody_path' in locals() and os.path.exists(clean_melody_path):
             os.remove(clean_melody_path)
+
 
 @api.route('/generate_with_multi', methods=['POST'])
 @cross_origin()

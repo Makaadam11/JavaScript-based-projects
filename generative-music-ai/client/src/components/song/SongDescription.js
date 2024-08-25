@@ -111,16 +111,25 @@ const SongDescription = () => {
 							</div>
 						)}
 						{faceExpression && (
-							<div>
-								<h2 style={{ marginBottom: "-10px" }}>Your Face Expression</h2>
-								<p style={{ whiteSpace: "pre-wrap" }}>{faceExpression}</p>{" "}
+							<div style={{ marginBottom: "-30px" }}>
+								<h2 style={{ marginBottom: "30px" }}>Your Face Expression</h2>
+								<p style={{ whiteSpace: "pre-wrap",  }}>{faceExpression}</p>
 							</div>
 						)}
 					</div>
 				</div>
-				{isLoading ? (
-					<div style={{ marginTop: "25px" }}>
-						<Loader />
+				{isLoading && (description || faceExpression) ? (
+					<div>
+						{isLoading && description && (
+							<div style={{ marginTop: "25px" }}>
+								<Loader />
+							</div>
+						)}
+						{isLoading && faceExpression && (
+							<div style={{ marginTop: "65px" }}>
+								<Loader />
+							</div>
+						)}
 					</div>
 				) : (
 					<div>
@@ -131,7 +140,7 @@ const SongDescription = () => {
 							</div>
 						)}
 						{faceExpression && (
-							<div style={{ marginTop: "60px" }}>
+							<div style={{ marginTop: "50px" }}>
 								<HoverButton text="Generate song" onclick={() => generateSongFromExpression()} color="#FFB6C1" width="400px" height="100px" />
 							</div>
 						)}
