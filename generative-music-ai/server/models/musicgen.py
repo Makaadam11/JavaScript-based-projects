@@ -28,12 +28,13 @@ class MusicGen:
             print("musicgen audio_file_path: ", audio_file_path)
             input_data["input_audio"] = audio_file_path
         try:
+            print("\n\n  ----------- Generating music... -----------  \n\n")
             output = replicate.run(self.model, input=input_data)
         except Exception as e:
             print(f"Error generating music: {str(e)}")
             return None
         if output:
-            print("Music generation successful.")
+            print("\n\n  ----------- Music generation successful. -----------  \n\n")
             return output
         else:
             print("Music generation failed.")

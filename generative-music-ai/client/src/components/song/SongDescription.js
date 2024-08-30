@@ -7,12 +7,14 @@ import { useLocation } from "react-router-dom";
 import HoverButton from "../hoverButton/HoverButton.js";
 import { handleClick, generateDescription } from "../../services/Api";
 import Loader from "../loader/Loader.js";
+import { debounce } from "lodash"; // Upewnij się, że masz zainstalowaną bibliotekę lodash
 import { logUserInteraction } from "../../services/Api";
 
 const SongDescription = () => {
 	const navigate = useNavigate();
 	const [isLoading, setIsLoading] = useState(false);
 	const [songURL, setSongURL] = useState(null);
+	const [isFetching, setIsFetching] = useState(false);
 	const location = useLocation();
 	const description = location.state?.description;
 	const faceExpression = location.state?.faceExpression;
@@ -22,20 +24,27 @@ const SongDescription = () => {
 		formattedDescription = description.replace(/(Title|Tempo|Genre|Melodic progression|Rythm):/g, "\n$&");
 	}
 
-	useEffect(() => {
-		const fetchSongURL = async () => {
-			try {
-				let url = await handleClick(description);
-				if (url) {
-					setSongURL(url);
-					setIsLoading(false);
-				}
-			} catch (error) {
-				console.error("Error fetching song URL:", error);
-				setIsLoading(false);
-			}
-		};
+	const fetchSongURL = debounce(async () => {
+		if (isFetching) {
+			return;
+		}
+		setIsFetching(true);
 
+		try {
+			const url = await handleClick(description);
+			if (url) {
+				setSongURL(url);
+			}
+			setIsLoading(false);
+		} catch (error) {
+			console.error("Error fetching song URL:", error);
+			setIsLoading(false);
+		} finally {
+			setIsFetching(false);
+		}
+	}, 300);
+
+	useEffect(() => {
 		if (description && !readySongUrl) {
 			setIsLoading(true);
 			fetchSongURL();
@@ -62,13 +71,14 @@ const SongDescription = () => {
 	const navigateToSong = () => {
 		if (readySongUrl) {
 			navigate("/song", { state: { song: readySongUrl } });
-		} else if (songURL) {
+		}
+		if (songURL) {
 			navigate("/song", { state: { song: songURL } });
 		}
 	};
 
 	useEffect(() => {
-		const handleClick = (event) => {
+		const handleClickInteraction = (event) => {
 			const interaction = {
 				type: "click",
 				element: event.target.tagName,
@@ -86,11 +96,11 @@ const SongDescription = () => {
 			logUserInteraction(interaction);
 		};
 
-		document.addEventListener("click", handleClick);
+		document.addEventListener("click", handleClickInteraction);
 		window.addEventListener("beforeunload", handleBeforeUnload);
 
 		return () => {
-			document.removeEventListener("click", handleClick);
+			document.removeEventListener("click", handleClickInteraction);
 			window.removeEventListener("beforeunload", handleBeforeUnload);
 		};
 	}, []);
@@ -113,7 +123,7 @@ const SongDescription = () => {
 						{faceExpression && (
 							<div style={{ marginBottom: "-30px" }}>
 								<h2 style={{ marginBottom: "30px" }}>Your Face Expression</h2>
-								<p style={{ whiteSpace: "pre-wrap",  }}>{faceExpression}</p>
+								<p style={{ whiteSpace: "pre-wrap" }}>{faceExpression}</p>
 							</div>
 						)}
 					</div>

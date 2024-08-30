@@ -9,6 +9,7 @@ from models.basicpitch import BasicPitch
 from models.musicgen import MusicGen
 from collections import defaultdict
 from uuid import uuid4
+import shutil
 from datetime import datetime
 import tempfile
 import requests
@@ -187,27 +188,50 @@ def generate_with_multi():
     blob_name = data['blobName']
     print("audio_link: ", audio_link)
     print("description: ", description)
+
+    temp_audio_path = None
+    clean_melody_path = None
+
     try:
-        # Stream the audio file from the provided link
-        response = requests.get(audio_link, stream=True)
-        response.raise_for_status()
-        audio_data = response.content
+        print("Initializing GCS client...")
+        client = storage.Client()
+        bucket = client.bucket(BUCKET_NAME)
+        blob = bucket.blob(blob_name)
+
+        if not blob.exists(client):
+            print("File not found in GCS")
+            return jsonify({"error": "File not found in GCS"}), 404
+
+        temp_audio_path = "audio.wav"
+        print(f"Downloading audio to temporary file: {temp_audio_path}")
+        blob.download_to_filename(temp_audio_path)
+
+        basic_pitch = BasicPitch()
+        print("BasicPitch object created")
+        clean_melody_path = basic_pitch.transcribe_audio(temp_audio_path)
+        print("Audio transcription completed", clean_melody_path)
         
-        # Transcribe the audio to WAV
-        wav_path = f"/tmp/{uuid4()}_transcribed.wav"
-        PianoTranscript.transcribe(audio_data, wav_path)
-        
-        # Generate music using the transcribed WAV
+        with open(clean_melody_path, 'rb') as clean_melody_file:
+            clean_melody_url, clean_melody_blob_name = upload_to_gcs(clean_melody_file, f"clean_melody.wav")
+
+        print("Generating music using the clean melody...")
         music_gen = MusicGen()
-        generated_music_url = music_gen.generate_music(description, wav_path)
-        
-        # Clean up
-        delete_from_gcs(blob_name)
-        os.remove(wav_path)
-        
+        generated_music_url = music_gen.generate_music(description, clean_melody_url)
+        print(f"Generated music URL: {generated_music_url}")
+
         return jsonify({"songUrl": generated_music_url}), 200
     except Exception as e:
+        print(f"Error in generate_with_multi: {e}")
         return jsonify({"error": str(e)}), 500
+    finally:
+        print("Cleaning up temporary files...")
+        if 'clean_melody_blob_name' in locals():
+            delete_from_gcs(clean_melody_blob_name)
+        if 'temp_audio_path' in locals() and os.path.exists(temp_audio_path):
+            os.remove(temp_audio_path)
+        if 'clean_melody_path' in locals() and os.path.exists(clean_melody_path):
+            os.remove(clean_melody_path)
+
 
 recording = False
 frames = []
@@ -244,7 +268,7 @@ def record_screen(duration, interval):
                     "fear": emotion['fear'],
                     "disgust": emotion['disgust']
                 })
-                print("timestamp: ", timestamp, "Evennt_log", event_log[timestamp])
+                # print("timestamp: ", timestamp, "Evennt_log", event_log[timestamp])
             except Exception as e:
                 print(f"Error processing frame: {e}")
         else:
@@ -280,7 +304,7 @@ def stop_screen_recording():
             "emotions": emotions,
             "interaction": interaction
         }
-        print("\n\ntimestamp: ", timestamp, "Combined_log", combined_log[timestamp])
+        # print("\n\ntimestamp: ", timestamp, "Combined_log", combined_log[timestamp])
 
 
     save_to_excel(combined_log)
@@ -296,7 +320,7 @@ def log_interaction():
         
     timestamp = round(time.time() - start_time, 2)
     
-    print(f"Interaction logged: {interaction_data} at timestamp {timestamp}")
+    # print(f"Interaction logged: {interaction_data} at timestamp {timestamp}")
     
     # Check if the new interaction is the same as the last two logged interactions
     if len(last_two_logged_interactions) == 2:
@@ -315,13 +339,13 @@ def log_interaction():
     if len(last_two_logged_interactions) > 2:
         last_two_logged_interactions.pop(0)
     
-    print(f"Current event_log: {event_log}")
+    # print(f"Current event_log: {event_log}")
     
     return jsonify({"message": "Interaction logged"}), 200
 
 def save_to_excel(combined_log):
     current_time = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f'interactions_and_emotions_{current_time}.xlsx'
+    filename = f'sessions_data/interactions_and_emotions_{current_time}.xlsx'
     
     data = []
     for timestamp, log_entry in combined_log.items():

@@ -1,10 +1,7 @@
-import tensorflow as tf
 from basic_pitch.inference import predict_and_save, predict
 from basic_pitch import ICASSP_2022_MODEL_PATH
 import numpy as np
 import pretty_midi
-from scipy.io import wavfile
-import fluidsynth
 import logging
 import os
 import shutil
@@ -17,6 +14,8 @@ class BasicPitch:
         try:
             logging.info(f"Transcribing audio from {temp_audio_path}")
             model_output, midi_data, note_events = predict(temp_audio_path)
+
+            print(model_output, "\n\n\n", midi_data, "\n\n\n", note_events)
             
             if model_output is None or not isinstance(model_output, dict):
                 raise ValueError("Invalid MIDI data returned from prediction")
@@ -24,7 +23,7 @@ class BasicPitch:
             logging.info("MIDI data generated successfully")
             
             output_wav_path = r'C:\5.ComputionalEnt\generative-music-ai\server\output.wav'
-            wavfile_path = self.midi_to_wav(model_output, output_wav_path)
+            wavfile_path = self.midi_to_wav(note_events, output_wav_path)
             logging.info(f"WAV file created at {wavfile_path}")
 
             return wavfile_path
@@ -32,21 +31,20 @@ class BasicPitch:
             logging.error(f"Error in transcribe_audio: {e}")
             raise
 
-    def midi_to_wav(self, midi_data, output_wav_path, sample_rate=44100):
+    def midi_to_wav(self, note_events, output_wav_path, sample_rate=44100):
         try:
             logging.info("Converting MIDI to WAV")
             midi = pretty_midi.PrettyMIDI()
             instrument = pretty_midi.Instrument(program=0)  # 0 is piano
             
-            for time, pitch in enumerate(np.argmax(midi_data['note'], axis=1)):
-                if midi_data['onset'][time, pitch] > 0.5:
-                    note = pretty_midi.Note(
-                        velocity=100,
-                        pitch=pitch,
-                        start=time / sample_rate,
-                        end=(time + 1) / sample_rate
-                    )
-                    instrument.notes.append(note)
+            for start, end, pitch, velocity, _ in note_events:
+                note = pretty_midi.Note(
+                    velocity=int(velocity * 127),  # Convert to MIDI velocity
+                    pitch=pitch,
+                    start=start,
+                    end=end
+                )
+                instrument.notes.append(note)
             
             logging.info("Instrument converted successfully")
             midi.instruments.append(instrument)

@@ -7,21 +7,16 @@ class MistralAI:
         self.headers = {"Content-Type": "application/json"}
 
     def generate_text(self, text):
-        # Create a dictionary with the input text
         data = {"text": text}
-
-        # Convert the dictionary to a JSON string
         json_data = json.dumps(data)
-
-        # Send the POST request
         response = requests.post(self.api_url, data=json_data, headers=self.headers)
 
-        # Handle the response
         if response.status_code == 200:
-            print("Request was successful.")
-            # Get the generated text
+            print("\n\n  ----------- Generating song description... -----------  \n\n")
             generated_text = response.json()['output']
-            print("Generated text from MistralAI: ", generated_text)
+            print("\n\n  ----------- Song description created. -----------  \n\n")
+
+            # print("Generated text from MistralAI: ", generated_text)
             return generated_text
         else:
             print(f"Request failed with status code {response.status_code}.")

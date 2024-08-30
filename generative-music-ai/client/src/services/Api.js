@@ -69,8 +69,9 @@ export async function generateDescription(text, navigate) {
 		console.log("song description from client side:", songDescription);
 
 		if (songDescription && navigate) {
-			navigate("/songdescription", { state: { description: songDescription } });
+			await navigate("/songdescription", { state: { description: songDescription, faceExpression: null } });
 		}
+
 		return songDescription;
 	} catch (error) {
 		console.error("Error in generateSongWithDescription:", error);

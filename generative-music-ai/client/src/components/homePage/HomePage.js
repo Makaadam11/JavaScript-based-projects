@@ -125,8 +125,9 @@ const HomePage = () => {
 							},
 						]}>
 						<BreadcrumbItem icon={Workspace} text="Home" />
-						<Button onClick={stopScreenRecording} style={{marginTop: "-10px", marginLeft: "80vw", height:"25px" , backgroundColor: "#44b9c9"}}>Stop Session</Button>
-
+						<Button onClick={stopScreenRecording} style={{ marginTop: "-10px", marginLeft: "80vw", height: "25px", backgroundColor: "#44b9c9" }}>
+							End session
+						</Button>
 					</BreadcrumbsBar>
 					<div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", marginTop: "1%" }}>
 						<div style={{ display: "flex", justifyContent: "space-between", width: "82%" }}>
