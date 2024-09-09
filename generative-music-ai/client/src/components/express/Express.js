@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Webcam from "react-webcam";
 import { Button, BreadcrumbsBar, BreadcrumbItem } from "monday-ui-react-core";
-import { analyzeFace, logUserInteraction } from "../../services/Api.js";
+import { analyzeFace, logUserInteraction, startCapturing, stopCapturing, startScreenRecording } from "../../services/Api.js";
 import { motion } from "framer-motion";
 import { Form, Quote, Emoji, Placeholder, Workspace } from "monday-ui-react-core/icons";
 import { useNavigate } from "react-router-dom";
@@ -23,9 +23,11 @@ const Express = () => {
 			} else {
 				setIsLoading(false);
 			}
+			await stopCapturing();
 		} catch (error) {
 			console.error("Error in onStop:", error);
 			setIsLoading(false);
+			await stopCapturing();
 		}
 	};
 
@@ -59,6 +61,7 @@ const Express = () => {
 
 		// Wywołaj handleNavigation na początku, aby zarejestrować początkowy URL
 		handleNavigation();
+		startCapturing();
 
 		return () => {
 			document.removeEventListener("click", handleClick);

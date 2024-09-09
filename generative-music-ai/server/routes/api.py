@@ -78,12 +78,27 @@ def transcribe_speech():
         print(f"An error occurred: {str(e)}")
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
+duration = 30
+
+@api.route('/set_duration', methods=['POST'])
+@cross_origin()
+def set_duration():
+    global duration
+    data = request.get_json()
+    new_duration = data.get('duration')
+    
+    if new_duration not in [30, 60, 120, 180, 300]:
+        return jsonify({"error": "Invalid duration value"}), 400
+
+    duration = new_duration
+    return jsonify({"message": f"Duration set to {duration} seconds"}), 200
+
 @api.route('/generate_with_description', methods=['POST'])
 @cross_origin()
 def generate_with_description():
     description = request.json.get('description')
     music_gen = MusicGen()
-    song_url = music_gen.generate_music(description)
+    song_url = music_gen.generate_music(duration,description)
     print("song_url: ", song_url)
     return jsonify({"songUrl": song_url}), 200
 
@@ -159,7 +174,7 @@ def generate_from_audio():
 
         print("Generating music using the clean melody...")
         music_gen = MusicGen()
-        generated_music_url = music_gen.generate_music("melodic song", clean_melody_url)
+        generated_music_url = music_gen.generate_music(duration, "melodic song", clean_melody_url)
         print(f"Generated music URL: {generated_music_url}")
 
         return jsonify({"songUrl": generated_music_url}), 200
@@ -216,7 +231,7 @@ def generate_with_multi():
 
         print("Generating music using the clean melody...")
         music_gen = MusicGen()
-        generated_music_url = music_gen.generate_music(description, clean_melody_url)
+        generated_music_url = music_gen.generate_music(duration, description, clean_melody_url)
         print(f"Generated music URL: {generated_music_url}")
 
         return jsonify({"songUrl": generated_music_url}), 200
@@ -239,6 +254,7 @@ event_log = defaultdict(list)
 combined_log = defaultdict(dict)
 start_time = None
 last_two_logged_interactions = []
+isCapturing = False
 
 def record_screen(duration, interval):
     global recording, frames, event_log, start_time
@@ -251,7 +267,7 @@ def record_screen(duration, interval):
 
     while recording and (time.time() - start_time) < duration:
         ret, frame = cap.read()
-        if ret:
+        if (ret and (not isCapturing)):
             try:
                 timestamp = round(time.time() - start_time, 2)
                 frames.append((timestamp, frame))
@@ -285,9 +301,8 @@ def start_screen_recording():
     frames = []
     event_log = defaultdict(list)
     start_time = time.time()
-    duration = request.json.get('duration', 60)
     interval = 0.15
-    threading.Thread(target=record_screen, args=(duration, interval)).start()
+    threading.Thread(target=record_screen, args=(1800, interval)).start()
     return jsonify({"message": "Screen recording started"}), 200
 
 @api.route('/stop_screen_recording', methods=['POST'])
@@ -305,7 +320,6 @@ def stop_screen_recording():
             "interaction": interaction
         }
         # print("\n\ntimestamp: ", timestamp, "Combined_log", combined_log[timestamp])
-
 
     save_to_excel(combined_log)
     return jsonify({"message": "Screen recording stopped"}), 200
@@ -367,3 +381,20 @@ def save_to_excel(combined_log):
     df = pd.DataFrame(data)
     df.to_excel(filename, index=False)
     print(f"Excel file saved: {filename}")
+
+@api.route('/start_capturing', methods=['POST'])
+@cross_origin()
+def start_capturing():
+    global isCapturing
+    isCapturing = True
+    return jsonify({"message": "Capturing started"}), 200
+
+@api.route('/stop_capturing', methods=['POST'])
+@cross_origin()
+def stop_capturing():
+    global isCapturing, recording
+    isCapturing = False
+    recording = True
+    interval = 0.15
+    threading.Thread(target=record_screen, args=(1800, interval)).start()
+    return jsonify({"message": "Capturing stopped"}), 200

@@ -316,3 +316,57 @@ export const stopScreenRecording = async function () {
 		console.error("Error in stopScreenRecording:", error);
 	}
 };
+
+export async function setDuration(newDuration) {
+	try {
+		const response = await fetch("http://127.0.0.1:5000/api/set_duration", {
+			mode: "cors",
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ duration: newDuration }),
+		});
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		const responseData = await response.json();
+		console.log("Duration set response:", responseData);
+		return responseData;
+	} catch (error) {
+		console.error("Error setting duration:", error);
+		throw error;
+	}
+}
+
+export const startCapturing = async () => {
+	try {
+		const response = await fetch("http://127.0.0.1:5000/api/start_capturing", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+		});
+		const data = await response.json();
+		console.log(data.message);
+	} catch (error) {
+		console.error("Error in startCapturing:", error);
+	}
+};
+
+export const stopCapturing = async () => {
+	try {
+		const response = await fetch("http://127.0.0.1:5000/api/stop_capturing", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+		});
+		const data = await response.json();
+		console.log(data.message);
+	} catch (error) {
+		console.error("Error in stopCapturing:", error);
+	}
+};

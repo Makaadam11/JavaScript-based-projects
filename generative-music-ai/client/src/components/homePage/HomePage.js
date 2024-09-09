@@ -4,15 +4,16 @@ import { useNavigate } from "react-router-dom";
 import { Form, Quote, Emoji, Placeholder, Workspace } from "monday-ui-react-core/icons";
 import { motion } from "framer-motion";
 import { CSSTransition } from "react-transition-group";
-import "./HomePage.css"; // make sure the path to your CSS file is correct
+import "./HomePage.css";
 import HoverButton from "../hoverButton/HoverButton.js";
 import WaveCard from "../waveCard/WaveCard.js";
 import { useHover } from "@uidotdev/usehooks";
-import { stopScreenRecording, logUserInteraction } from "../../services/Api.js";
+import { stopScreenRecording, logUserInteraction, setDuration } from "../../services/Api.js";
 
 const HomePage = () => {
 	const navigate = useNavigate();
-	const [waveCardProps, setWaveCardProps] = useState({ text: "", colors: ["#fff"] }); // Default state
+	const [waveCardProps, setWaveCardProps] = useState({ text: "", colors: ["#fff"] });
+	const [selectedDuration, setSelectedDuration] = useState(30);
 
 	const [hoverRef, isHovering] = useHover();
 	const [hoverRef1, isHovering1] = useHover();
@@ -76,6 +77,15 @@ const HomePage = () => {
 		}
 	}, [isHovering, isHovering1, isHovering2, isHovering3, isHovering4, isHovering5]);
 
+	const handleSetDuration = async (newDuration) => {
+		try {
+			const response = await setDuration(newDuration);
+			console.log("Duration set response:", response);
+		} catch (error) {
+			console.error("Error setting duration:", error);
+		}
+	};
+
 	useEffect(() => {
 		const handleClick = (event) => {
 			const interaction = {
@@ -117,7 +127,7 @@ const HomePage = () => {
 			<CSSTransition in={true} appear={true} timeout={500} classNames="fade">
 				<div>
 					<BreadcrumbsBar
-						style={{ position: "absolute", top: 0, left: 0 }}
+						style={{ display: "flex", alignItems: "center", padding: "10px", backgroundColor: "#f0f0f0" }}
 						items={[
 							{
 								icon: Workspace,
@@ -125,9 +135,26 @@ const HomePage = () => {
 							},
 						]}>
 						<BreadcrumbItem icon={Workspace} text="Home" />
-						<Button onClick={stopScreenRecording} style={{ marginTop: "-10px", marginLeft: "80vw", height: "25px", backgroundColor: "#44b9c9" }}>
-							End session
-						</Button>
+						<div style={{ marginLeft: "auto", display: "flex", alignItems: "center", backgroundColor: "#73ddd4", marginRight: "1vw", height: "3vh", borderRadius: "10px", padding: "5px" }}>
+							{/* <label htmlFor="duration-select" style={{ color: "white", marginRight: "10px", marginLeft: "1vw" }}>
+								Song duration:
+							</label> */}
+							<select id="duration-select" value={selectedDuration} onChange={(e) => setSelectedDuration(parseInt(e.target.value))} style={{ marginRight: "0.5vw", marginLeft: "1vw" }}>
+								<option value={30} disabled hidden>
+									Song duration
+								</option>
+								<option value={30}>30 seconds</option>
+								<option value={60}>1 minute</option>
+								<option value={120}>2 minutes</option>
+								<option value={180}>3 minutes</option>
+							</select>
+							<Button onClick={() => handleSetDuration(selectedDuration)} style={{ backgroundColor: "#44b9c9", marginRight: "0.5vw", height: "3vh" }}>
+								Set time
+							</Button>
+							<Button onClick={stopScreenRecording} style={{ backgroundColor: "#44b9c9", marginRight: "1vw", height: "3vh" }}>
+								End session
+							</Button>
+						</div>
 					</BreadcrumbsBar>
 					<div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", marginTop: "1%" }}>
 						<div style={{ display: "flex", justifyContent: "space-between", width: "82%" }}>

@@ -24,53 +24,53 @@ const Blue = () => {
 	};
 
 	const StyledSlider = styled(ReactSlider)`
-  width: 100%;
-  height: 80px;
-  background-color: rgba(255, 255, 255, 0.1);
-  border-radius: 40px;
-  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(255, 255, 255, 0.1);
-  background: ${(props) => {
-		const startColor = getColorShade(0);
-		const midColor = getColorShade(50);
-		const endColor = getColorShade(100);
-		return `linear-gradient(to right, 
-    ${startColor} 0%, 
-    ${midColor} 50%,
-    ${endColor} 100%
-  )`;
-  }};
-  margin: 20px 0;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
-`;
+	width: 100%;
+	height: 80px;
+	background-color: rgba(255, 255, 255, 0.1);
+	border-radius: 40px;
+	box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(255, 255, 255, 0.1);
+	background: ${(props) => {
+			const startColor = getColorShade(0);
+			const midColor = getColorShade(50);
+			const endColor = getColorShade(100);
+			return `linear-gradient(to right, 
+		${startColor} 0%, 
+		${midColor} 50%,
+		${endColor} 100%
+	)`;
+	}};
+	margin: 20px 0;
+	box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+	`;
 
 	const StyledThumb = styled.div`
-  height: 100px;
-  width: 100px;
-  margin: -13px 0;
-  background-color: ${(props) => getColorShade(props.value)};
-  border-radius: 50%;
-  cursor: grab;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 255, 255, 0.1);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-weight: bold;
-  font-color: black
-  color: rgba(255, 255, 255, 0.8);
-  &:hover {
-    transform: scale(1.05);
-  }
+	height: 100px;
+	width: 100px;
+	margin: -13px 0;
+	background-color: ${(props) => getColorShade(props.value)};
+	border-radius: 50%;
+	cursor: grab;
+	box-shadow: 0 0 10px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 255, 255, 0.1);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	font-weight: bold;
+	font-color: black
+	color: rgba(255, 255, 255, 0.8);
+	&:hover {
+		transform: scale(1.05);
+	}
 
-  &:active {
-    cursor: grabbing;
-  }
-`;
+	&:active {
+		cursor: grabbing;
+	}
+	`;
 
-	const StyledTrack = styled.div`
-  top: 0;
-  bottom: 0;
-  border-radius: 999px;
-`;
+		const StyledTrack = styled.div`
+	top: 0;
+	bottom: 0;
+	border-radius: 999px;
+	`;
 
 	const Thumb = (props, state) => (
 		<StyledThumb {...props} value={state.valueNow}>
@@ -155,7 +155,7 @@ const Blue = () => {
 				<div style={{ display: "flex", justifyContent: "space-between", width: "70%" }}>
 					<StyledSlider value={emotionPercentage} onChange={(value) => setEmotionPercentage(value)} min={0} max={100} renderThumb={Thumb} renderTrack={Track} />{" "}
 				</div>
-				<div style={{ marginTop: "2%" }}> {isLoading ? <Loader style={{ height: "100px" }} /> : <HoverButton onclick={() => onClick()} text="Generate" color="#29C9G9" width="220px" height="100px" style={{ margin: "10px" }} />}</div>
+				<div style={{ marginTop: "2%" }}> {isLoading ? <Loader style={{ height: "100px" }} /> : <HoverButton onclick={() => onClick()} text="Generate" color="#0000CD" width="220px" height="100px" style={{ margin: "10px" }} />}</div>
 			</div>
 		</motion.div>
 	);

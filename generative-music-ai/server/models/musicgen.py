@@ -6,7 +6,7 @@ class MusicGen:
     def __init__(self):
         self.model = "meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb"
 
-    def generate_music(self, description=None, audio_file_path=None):
+    def generate_music(self, duration, description=None, audio_file_path=None):
         input_data = {
             "top_k": 250,
             "top_p": 0,
@@ -17,7 +17,7 @@ class MusicGen:
             "continuation_start": 0,
             "multi_band_diffusion": False,
             "normalization_strategy": "peak",
-            "duration": 15,
+            "duration": duration,
             "classifier_free_guidance": 8,
         }
 
